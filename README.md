@@ -77,3 +77,102 @@ In the above image you can see that:
 
 ![Quiz ERD](img/quiz-erd.png)
 
+## JOIN More than Two Tables
+
+Look at the three tables below.
+
+![ERD for Web Events, Accounts & Orders Tables](img/join-3-tables.png)
+
+The code below pulls all of the data from all of the joined tables.
+
+```sql
+-- Alternatively you could also use the following SELECT statement to query specific columns
+-- SELECT web_events.channel, accounts.name, orders.total --
+SELECT *
+FROM web_events
+JOIN accounts
+ON web_events.account_id = accounts.id
+JOIN orders
+ON accounts.id = orders.account_id
+```
+
+our **JOIN** holds a table, and **ON** is a link for our **PK** to equal the **FK**.
+
+## Alias
+
+We can simply write our alias directly after the column name (in the **SELECT**) or table name (in the **FROM** or **JOIN**) by writing the alias directly following the column or table we would like to alias. This will allow you to create clear column names even if calculations are used to create the column, and you can be more efficient with your code by aliasing table names.
+
+Before, you saw something like:
+
+Examples:
+
+```sql
+SELECT o.*, a.*
+FROM orders o
+JOIN accounts a
+ON o.account_id = a.id
+```
+
+```sql
+SELECT col1 + col2 AS total, col3
+```
+
+Frequently, you might also see these statements without the **AS** statement and they would still produce the **exact same results**:
+
+```sql
+SELECT col1 + col2 total, col3
+```
+
+## Aliases for Columns in Resulting Table
+
+While aliasing tables is the most common use case. It can also be used to alias the columns selected to have the resulting table reflect a more readable name.
+
+Example:
+
+```sql
+Select t1.column1 aliasname, t2.column2 aliasname2
+FROM tablename AS t1
+JOIN tablename2 AS t2
+```
+
+> If you have two or more columns in your SELECT that have the same name after the table name such as accounts.name and sales_reps.name you will need to alias them. Otherwise it will only show one of the columns. You can alias them like accounts.name AS AcountName, sales_rep.name AS SalesRepName
+
+## QUESTIONS
+
+1. Provide a table for all **web_events** associated with the account **name** of `Walmart`. There should be three columns. Be sure to include the `primary_poc`, time of the event, and the `channel` for each event. Additionally, you might choose to add a fourth column to assure only `Walmart` events were chosen.
+
+```sql
+SELECT we.occurred_at, we.channel, ac.primary_poc, ac.name
+FROM web_events we
+JOIN accounts ac
+ON we.account_id = ac.id
+WHERE ac.name = 'Walmart'
+```
+
+2. Provide a table that provides the **region** for each **sales_rep** along with their associated **accounts**. Your final table should include three columns: the region **name**, the sales rep **name**, and the account **name**. Sort the accounts alphabetically (A-Z) according to the account name.
+
+```sql
+SELECT re.name AS region_name, sr.name AS sales_rep_name, ac.name AS acc_name
+FROM sales_reps sr
+JOIN region re 
+ON sr.region_id = re.id
+JOIN accounts ac
+ON ac.sales_rep_id = sr.id
+ORDER BY ac.name
+```
+
+3. Provide the **name** for each region for every **order**, as well as the account **name** and the **unit price** they paid (total_amt_usd/total) for the order. Your final table should have 3 columns: **region name**, **account name**, and **unit price**. A few accounts have 0 for **total**, so I divided by (total + 0.01) to assure not dividing by zero.
+
+```sql
+SELECT re.name AS region_name, ac.name AS acc_name, od.total_amt_usd/(od.total+0.01) AS unit_price
+FROM sales_reps sr
+JOIN region re 
+ON sr.region_id = re.id
+JOIN accounts ac
+ON ac.sales_rep_id = sr.id
+JOIN orders od
+ON od.account_id = ac.id
+```
+
+## OUTER JOINS
+
