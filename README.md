@@ -174,5 +174,202 @@ JOIN orders od
 ON od.account_id = ac.id
 ```
 
-## OUTER JOINS
+## OTHER TYPE OF JOINS
+
+![outer-joins](img/outer-joins.png)
+
+Notice each of these new **JOIN** statements pulls all the same rows as an **INNER JOIN**, which you saw by just using **JOIN**, but they also potentially pull some additional rows.
+
+If there is not matching information in the **JOIN**ed table, then you will have columns with empty cells. These empty cells introduce a new data type called **NULL**.
+
+**LEFT JOIN**
+```sql
+SELECT a.id, a.name, o.total
+FROM orders o
+LEFT JOIN accounts a
+ON o.account_id = a.id
+```
+
+**RIGHT JOIN**
+```sql
+SELECT a.id, a.name, o.total
+FROM orders o
+RIGHT JOIN accounts a
+ON o.a
+```
+
+### Quick Note
+
+You might see the SQL syntax of
+
+`LEFT OUTER JOIN`
+
+OR
+
+`RIGHT OUTER JOIN`
+
+These are the exact same commands as the **LEFT JOIN** and **RIGHT JOIN** 
+
+### OUTER JOINS
+
+The last type of join is a full outer join. This will return the inner join result set, as well as any unmatched rows from either of the two tables being joined.
+
+Again this returns rows that **do not match** one another from the two tables. The use cases for a full outer join are **very rare**.
+
+Similar to the above, you might see the language **FULL OUTER JOIN**, which is the same as **OUTER JOIN**.
+
+
+## JOINs and Filtering
+
+```sql
+SELECT orders.*, accounts.*
+FROM orders
+LEFT JOIN accounts
+ON orders.account_id = accounts.id 
+AND accounts.sales_rep_id = 321500
+```
+
+A simple rule to remember is that, when the database executes this query, it executes the join and everything in the **ON** clause first. Think of this as building the new result set. 
+
+## QUESTIONS
+
+1. Provide a table that provides the **region** for each **sales_rep** along with their associated **accounts**. This time only for the `Midwest` region. Your final table should include three columns: the region **name**, the sales rep **name**, and the account **name**. Sort the accounts alphabetically (A-Z) according to the account name.
+
+```sql
+SELECT re.name AS region_name, sr.name AS sales_rep_name, ac.name AS acc_name
+FROM sales_reps sr
+JOIN region re
+ON sr.region_id = re.id
+JOIN accounts ac
+ON ac.sales_rep_id = sr.id
+AND re.name = 'Midwest'
+ORDER BY ac.name
+```
+
+2. Provide a table that provides the **region** for each **sales_rep** along with their associated **accounts**. This time only for accounts where the sales rep has a first name starting with `S` and in the `Midwest` region. Your final table should include three columns: the region **name**, the sales rep **name**, and the account **name**. Sort the accounts alphabetically (A-Z) according to the account name.
+
+```sql
+SELECT re.name AS region_name, sr.name AS sales_rep_name, ac.name AS acc_name
+FROM sales_reps sr
+JOIN region re
+ON sr.region_id = re.id
+JOIN accounts ac
+ON ac.sales_rep_id = sr.id
+AND sr.name LIKE 'S%'
+AND re.name = 'Midwest'
+ORDER BY ac.name
+```
+
+3. Provide a table that provides the **region** for each **sales_rep** along with their associated **accounts**. This time only for accounts where the sales rep has a **last** name starting with `K` and in the `Midwest` region. Your final table should include three columns: the region **name**, the sales rep **name**, and the account **name**. Sort the accounts alphabetically (A-Z) according to the account name.
+
+```sql
+SELECT re.name AS region_name, sr.name AS sales_rep_name, ac.name AS acc_name
+FROM sales_reps sr
+JOIN region re
+ON sr.region_id = re.id
+JOIN accounts ac
+ON ac.sales_rep_id = sr.id
+AND sr.name LIKE '% K%'
+AND re.name = 'Midwest'
+ORDER BY ac.name
+```
+
+4. Provide the **name** for each region for every **order**, as well as the account **name** and the **unit price** they paid (total_amt_usd/total) for the order. However, you should only provide the results if the **standard order quantity** exceeds `100`. Your final table should have 3 columns: **region name**, **account name**, and **unit price**. In order to avoid a division by zero error, adding .01 to the denominator here is helpful total_amt_usd/(total+0.01).
+
+```sql
+SELECT re.name AS region_name, ac.name AS acc_name, od.total_amt_usd/(od.total + 0.01) AS unit_price
+FROM sales_reps sr
+JOIN region re
+ON sr.region_id = re.id
+JOIN accounts ac
+ON ac.sales_rep_id = sr.id
+JOIN orders od
+ON od.account_id = ac.id
+AND od.standard_qty > 100
+```
+
+5. Provide the **name** for each region for every order, as well as the account name and the unit price they paid (total_amt_usd/total) for the order. However, you should only provide the results if the standard order quantity exceeds 100 and the poster order quantity exceeds 50. Your final table should have 3 columns: region name, account name, and unit price. Sort for the smallest unit price first. In order to avoid a division by zero error, adding .01 to the denominator here is helpful (total_amt_usd/(total+0.01).
+
+```sql
+SELECT re.name AS region_name, ac.name AS acc_name, od.total_amt_usd/(od.total + 0.01) AS unit_price
+FROM sales_reps sr
+JOIN region re
+ON sr.region_id = re.id
+JOIN accounts ac
+ON ac.sales_rep_id = sr.id
+JOIN orders od
+ON od.account_id = ac.id
+AND od.standard_qty > 100
+AND od.poster_qty > 50
+ORDER BY unit_price
+```
+
+6. Provide the name for each region for every **order**, as well as the account **name** and the **unit price** they paid (total_amt_usd/total) for the order. However, you should only provide the results if the **standard order quantity** exceeds `100` and the **poster order quantity** exceeds `50`. Your final table should have 3 columns: **region name**, **account name**, and **unit price**. Sort for the largest **unit price** first. In order to avoid a division by zero error, adding .01 to the denominator here is helpful (total_amt_usd/(total+0.01).
+
+```sql
+SELECT re.name AS region_name, ac.name AS acc_name, od.total_amt_usd/(od.total + 0.01) AS unit_price
+FROM sales_reps sr
+JOIN region re
+ON sr.region_id = re.id
+JOIN accounts ac
+ON ac.sales_rep_id = sr.id
+JOIN orders od
+ON od.account_id = ac.id
+AND od.standard_qty > 100
+AND od.poster_qty > 50
+ORDER BY unit_price DESC
+```
+
+7. What are the different **channels** used by **account id** `1001`? Your final table should have only 2 columns: **account name** and the different **channels**. You can try **SELECT DISTINCT** to narrow down the results to only the unique values.
+
+```sql
+SELECT DISTINCT we.channel, ac.name AS acc_name
+FROM web_events we
+JOIN accounts ac
+ON we.account_id = ac.id
+AND ac.id = '1001'
+```
+
+8. Find all the orders that occurred in `2015`. Your final table should have 4 columns: **occurred_at**, **account name**, **order total**, and order **total_amt_usd**.
+
+```sql
+SELECT o.occurred_at, a.name, o.total, o.total_amt_usd
+FROM accounts a
+JOIN orders o
+ON o.account_id = a.id
+WHERE o.occurred_at BETWEEN '01-01-2015' AND '01-01-2016'
+ORDER BY o.occurred_at DESC;
+```
+
+You will notice that using **BETWEEN** is tricky for dates! While **BETWEEN** is generally inclusive of endpoints, it assumes the time is at 00:00:00 (i.e. midnight) for dates. This is the reason why we set the right-side endpoint of the period at '01-01-2016'.
+
+## RECAP
+
+There are a few more advanced JOINs that we did not cover here, and they are used in very specific use cases. [UNION and UNION ALL](https://www.w3schools.com/sql/sql_union.asp), [CROSS JOIN](http://www.w3resource.com/sql/joins/cross-join.php), and the tricky [SELF JOIN](https://www.w3schools.com/sql/sql_join_self.asp). These are more advanced than this course will cover, but it is useful to be aware that they exist, as they are useful in special cases.
+
+## BETWEEN Operator
+
+Sometimes we can make a cleaner statement using **BETWEEN** than we can use **AND**. Particularly this is true when we are using the same column for different parts of our **AND** statement. In the previous video, we probably should have used **BETWEEN**.
+
+Instead of writing :
+
+`WHERE column >= 6 AND column <= 10``
+
+we can instead write, equivalently:
+
+`WHERE column BETWEEN 6 AND 10``
+
+## SQL Aggregations
+
+- Deal with NULL values
+- Create aggregations in your SQL Queries including
+    * COUNT
+    * SUM
+    * MIN & MAX
+    * AVG
+    * GROUP BY
+    * DISTINCT
+    * HAVING
+- Create DATE functions
+- Implement CASE statements
 
