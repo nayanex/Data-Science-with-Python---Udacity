@@ -353,11 +353,11 @@ Sometimes we can make a cleaner statement using **BETWEEN** than we can use **AN
 
 Instead of writing :
 
-`WHERE column >= 6 AND column <= 10``
+`WHERE column >= 6 AND column <= 10`
 
 we can instead write, equivalently:
 
-`WHERE column BETWEEN 6 AND 10``
+`WHERE column BETWEEN 6 AND 10`
 
 ## SQL Aggregations
 
@@ -373,3 +373,113 @@ we can instead write, equivalently:
 - Create DATE functions
 - Implement CASE statements
 
+## NULLs and Aggregation
+
+**NULLs** are a datatype that specifies where no data exists in SQL. 
+
+You need to write `IS NULL` instead of `= NULL`, that's because `NULL` is not a value, but a **property** of the data.
+
+## NULLs - Expert Tip
+
+There are two common ways in which you are likely to encounter **NULL**s:
+
+* **NULL**s frequently occur when performing a **LEFT** or **RIGHT JOIN**. When some rows in the left table of a left join are not matched with rows in the right table, those rows will contain some **NULL** values in the result set.
+* **NULL**s can also occur from simply missing data in our database.
+
+## First Aggregation - COUNT
+
+### COUNT the Number of Rows in a Table
+
+Finding all the rows in the b table.
+
+```sql
+SELECT COUNT(*)
+FROM accounts;
+```
+
+But we could have just as easily chosen a column to drop into the aggregation function:
+
+```sql
+SELECT COUNT(accounts.id)
+FROM accounts;
+```
+
+These two statements are equivalent, but this isn't always the case.
+
+Other examples:
+
+```sql
+SELECT COUNT(*)
+FROM orders
+WHERE occurred_at >= '2016-12-01'
+AND occurred_at < '2017-01-01'
+```
+
+Using alias
+
+```sql
+SELECT COUNT(*) AS order_count
+FROM orders
+WHERE occurred_at >= '2016-12-01'
+AND occurred_at < '2017-01-01'
+```
+
+```sql
+SELECT COUNT (*) AS account_count
+FROM accounts
+```
+
+```sql
+SELECT COUNT (id) AS account_id_count
+FROM accounts
+```
+
+```sql
+SELECT COUNT(primary_poc) AS account_primary_poc_count
+FROM accounts
+```
+
+Notice that **COUNT** does not consider rows that have **NULL** values. Therefore, this can be useful for quickly identifying which rows have missing data. 
+
+## SUM
+
+Unlike **COUNT**, you can only use **SUM** on numeric columns. However, **SUM** will ignore **NULL** values, as do the other aggregation functions
+
+```sql
+SELECT SUM(standard_qty) AS standard,
+       SUM(gloss_qty) AS gloss,
+       SUM(poster_qty) AS poster
+FROM orders
+```
+
+### Aggregation Reminder
+
+An important thing to remember: **aggregators only aggregate vertically - the values of a column**. If you want to perform a calculation across rows, you would do this with **simple arithmetic**(aggregate across rows).
+
+
+1. Find the total amount of **poster_qty** paper ordered in the **orders** table.
+
+```sql
+SELECT SUM(poster_qty)
+FROM orders
+```
+
+2. Find the total amount of **standard_qty** paper ordered in the **orders** table.
+
+```sql
+```
+
+3. Find the total dollar amount of sales using the **total_amt_usd** in the **orders** table.
+
+```sql
+```
+
+4. Find the total amount spent on **standard_amt_usd** and **gloss_amt_usd** paper for each order in the orders table This should give a dollar amount for each order in the table.
+
+```sql
+```
+
+5. Find the **standard_amt_usd** per unit of **standard_qty** paper. Your solution should use both aggregation and a mathematical operator.
+
+```sql
+```
