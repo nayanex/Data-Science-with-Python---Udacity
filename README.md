@@ -573,6 +573,8 @@ FROM orders;
 
 6. Via the video, you might be interested in how to calculate the MEDIAN. Though this is more advanced than what we have covered so far try finding - what is the MEDIAN **total_usd** spent on all **orders**?
 
+![media-formula](img/media-formula.png)
+
 ```sql
 -- we can hard code a solution in the following way.--
 SELECT *
@@ -584,4 +586,116 @@ ORDER BY total_amt_usd DESC
 LIMIT 2;
 ```
 
+even better:
+
+```sql
+SELECT AVG(total_amt_usd)
+FROM (
+        SELECT *
+        FROM (
+            SELECT total_amt_usd
+            FROM orders
+            ORDER BY total_amt_usd
+            LIMIT 3457
+            ) AS FirstHalf
+        ORDER BY total_amt_usd DESC
+        LIMIT 2
+    ) AS Table2
+```
+
 Since there are 6912 orders - we want the average of the 3457 and 3456 order amounts when ordered. This is the average of 2483.16 and **2482.55**. This gives the median of 2482.855. This obviously isn't an ideal way to compute. If we obtain new orders, we would have to change the limit. SQL didn't even calculate the median for us. The above used a SUBQUERY, but you could use any method to find the two necessary values, and then you just need the average of them.
+
+## GROUP BY
+
+The key takeaways here:
+
+* **GROUP BY** can be used to aggregate data within subsets of the data. For example, grouping for different accounts, different regions, or different sales representatives.
+* Any column in the **SELECT** statement that is not within an aggregator must be in the **GROUP BY** clause.
+* The **GROUP BY** always goes between **WHERE** and **ORDER BY**.
+
+### GROUP BY - Expert Tip
+
+```sql
+SELECT account_id,
+       SUM(standard_qty) AS standard,
+       SUM(gloss_qty) AS gloss,
+       SUM(poster_qty) AS poster
+FROM orders
+GROUP BY account_id
+ORDER BY account_id
+```
+
+Before we dive deeper into aggregations using **GROUP BY** statements, it is worth noting that SQL evaluates the aggregations before the **LIMIT** clause. If you don’t group by any columns, you’ll get a 1-row result—no problem there. If you group by a column with enough unique values that it exceeds the **LIMIT** number, the aggregates will be calculated, and then some rows will simply be omitted from the results.
+
+This is actually a nice way to do things because you know you’re going to get the correct aggregates. If SQL cuts the table down to 100 rows, then performed the aggregations, your results would be substantially different.
+
+### Questions: GROUP BY
+
+One part that can be difficult to recognize is when it might be easiest to use an aggregate or one of the other SQL functionalities. Try some of the below to see if you can differentiate to find the easiest solution.
+
+1. Which **account** (by name) placed the earliest order? Your solution should have the **account name** and the **date** of the order.
+
+```sql
+SELECT ac.name, od.occurred_at
+FROM accounts AS ac
+JOIN orders AS od
+ON ac.id = od.account_id
+ORDER BY od.occurred_at
+```
+
+2. Find the total sales in **usd** for each account. You should include two columns - the total sales for each company's orders in **usd** and the company **name**.
+
+```sql
+SELECT ac.name, SUM(od.total)
+FROM accounts AS ac
+JOIN orders AS od
+ON ac.id = od.account_id
+GROUP BY ac.name
+```
+
+3. Via what **channel** did the most recent (latest) **web_event** occur, which **account** was associated with this **web_event**? Your query should return only three values - the **date**, **channel**, and **account name.**
+
+```sql
+SELECT we.channel, ac.name, we.occurred_at
+FROM web_events AS we
+JOIN accounts AS ac
+ON ac.id = we.account_id
+ORDER BY we.occurred_at DESC
+LIMIT 1
+```
+
+
+4. Find the total number of times each type of **channel** from the **web_events** was used. Your final table should have two columns - the **channel** and the number of times the channel was used.
+
+```sql
+SELECT we.channel, COUNT(*)
+FROM web_events AS we
+GROUP BY we.channel
+```
+
+5. Who was the **primary contact** associated with the earliest **web_event**?
+
+```sql
+SELECT ac.primary_poc, we.occurred_at
+FROM web_events AS we
+JOIN accounts AS ac
+ON ac.id = we.account_id
+ORDER BY we.occurred_at
+LIMIT 1
+```
+
+6. What was the smallest order placed by each **account** in terms of **total usd**. Provide only two columns - the account **name** and the **total usd**. Order from smallest dollar amounts to largest.
+
+```sql
+SELECT ac.name, MIN(od.total_amt_usd)
+FROM accounts AS ac
+JOIN orders AS od
+ON ac.id = od.account_id
+GROUP BY ac.name
+ORDER BY od.total_amt_usd
+```
+
+7. Find the number of **sales reps** in each region. Your final table should have two columns - the **region** and the number of **sales_reps**. Order from the fewest reps to most reps.
+
+```sql
+```
