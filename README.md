@@ -641,12 +641,13 @@ FROM accounts AS ac
 JOIN orders AS od
 ON ac.id = od.account_id
 ORDER BY od.occurred_at
+LIMIT 1
 ```
 
 2. Find the total sales in **usd** for each account. You should include two columns - the total sales for each company's orders in **usd** and the company **name**.
 
 ```sql
-SELECT ac.name, SUM(od.total)
+SELECT ac.name, SUM(od.total_amt_usd) AS total_sales
 FROM accounts AS ac
 JOIN orders AS od
 ON ac.id = od.account_id
@@ -687,15 +688,94 @@ LIMIT 1
 6. What was the smallest order placed by each **account** in terms of **total usd**. Provide only two columns - the account **name** and the **total usd**. Order from smallest dollar amounts to largest.
 
 ```sql
-SELECT ac.name, MIN(od.total_amt_usd)
+SELECT ac.name, MIN(od.total_amt_usd) as smallest_order
 FROM accounts AS ac
 JOIN orders AS od
 ON ac.id = od.account_id
 GROUP BY ac.name
-ORDER BY od.total_amt_usd
+ORDER BY smallest_order
+-- Sort of strange we have a bunch of orders with no dollars. We might want to look into those.--
 ```
 
 7. Find the number of **sales reps** in each region. Your final table should have two columns - the **region** and the number of **sales_reps**. Order from the fewest reps to most reps.
 
 ```sql
+SELECT re.name, COUNT(sr) AS num_sales_rep
+FROM sales_reps AS sr
+JOIN region AS re
+ON re.id = sr.region_id
+GROUP BY re.name
+ORDER BY num_sales_rep
 ```
+
+## GROUP BY - Multiple Columns
+
+```sql
+SELECT account_id,
+       channel,
+       COUNT(id) as events
+FROM web_events
+GROUP BY account_id, channel
+ORDER BY account_id, channel DESC
+```
+
+* You can **GROUP BY** multiple columns at once, as we showed here. This is often useful to aggregate across a number of different segments.
+* The order of columns listed in the **ORDER BY** clause does make a difference. You are ordering the columns from left to right.
+
+### GROUP BY - Expert Tips
+
+* The order of column names in your **GROUP BY** clause doesn’t matter—the results will be the same regardless. If we run the same query and reverse the order in the **GROUP BY** clause, you can see we get the same results.
+* As with **ORDER BY**, you can substitute numbers for column names in the **GROUP BY** clause. It’s generally recommended to do this only when you’re grouping many columns, or if something else is causing the text in the GROUP BY clause to be excessively long.
+
+### Questions: GROUP BY Part II
+
+1. For each account, determine the average amount of each type of paper they purchased across their orders. Your result should have four columns - one for the account name and one for the average quantity purchased for each of the paper types for each account.
+
+```sql
+SELECT ac.name, AVG(od.standard_qty) AS avg_stand_qty, AVG(od.poster_qty) AS avg_post_qty, AVG(od.gloss_qty) AS avg_gloss_qty
+FROM accounts AS ac
+JOIN orders AS od
+ON ac.id = od.account_id
+GROUP BY ac.name
+```
+
+2. For each account, determine the average amount spent per order on each paper type. Your result should have four columns - one for the account name and one for the average amount spent on each paper type.
+
+```sql
+SELECT ac.name, AVG(od.standard_amt_usd) AS avg_standard_amt_usd, AVG(od.poster_amt_usd) AS avg_poster_amt_usd, AVG(od.gloss_amt_usd) AS avg_gloss_amt_usd
+FROM accounts AS ac
+JOIN orders AS od
+ON ac.id = od.account_id
+GROUP BY ac.name
+```
+
+3. Determine the number of times a particular channel was used in the web_events table for each sales rep. Your final table should have three columns - the name of the sales rep, the channel, and the number of occurrences. Order your table with the highest number of occurrences first.
+
+```sql
+SELECT sr.name, we.channel, COUNT(*) web_events_occurrences
+FROM web_events AS we
+JOIN accounts AS ac
+ON ac.id = we.account_id
+JOIN sales_reps AS sr
+ON sr.id = ac.sales_rep_id
+GROUP BY sr.name, we.channel
+ORDER BY web_events_occurrences DESC
+```
+
+4. Determine the number of times a particular channel was used in the web_events table for each region. Your final table should have three columns - the region name, the channel, and the number of occurrences. Order your table with the highest number of occurrences first.
+
+```sql
+SELECT re.name, we.channel, COUNT(*) web_events_occurrences
+FROM web_events AS we
+JOIN accounts AS ac
+ON ac.id = we.account_id
+JOIN sales_reps AS sr
+ON sr.id = ac.sales_rep_id
+JOIN region AS re
+ON re.id = sr.region_id
+GROUP BY re.name, we.channel
+ORDER BY web_events_occurrences DESC
+```
+
+
+
