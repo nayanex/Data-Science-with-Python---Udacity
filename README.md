@@ -817,13 +817,14 @@ ORDER BY account_id
 > The below two queries have the same number of resulting rows (351), so we know that every account is associated with only one region. If each account was associated with more than one region, the first query should have returned more rows than the second query.
 
 ```sql
-SELECT a.id as "account id", r.id as "region id", 
-a.name as "account name", r.name as "region name"
+SELECT a.id as "account id", a.name as "account name",  
+r.id as "region id", r.name as "region name"
 FROM accounts a
 JOIN sales_reps s
 ON s.id = a.sales_rep_id
 JOIN region r
-ON r.id = s.region_id;
+ON r.id = s.region_id
+ORDER BY "account id", "account name"
 ```
 
 and
@@ -851,4 +852,157 @@ and
 SELECT DISTINCT id, name
 FROM sales_reps;
 ```
+## HAVING
 
+```sql
+SELECT account_id,
+       SUM(total_amt_usd) AS sum_total_amt_usd
+FROM orders
+GROUP BY 1
+HAVING SUM(total_amt_usd) >= 250000
+```
+
+### HAVING - Expert Tip
+
+**HAVING** is the “clean” way to filter a query that has been aggregated, but this is also commonly done using a [subquery](https://mode.com/sql-tutorial/sql-sub-queries/). Essentially, any time you want to perform a **WHERE** on an element of your query that was created by an aggregate, you need to use **HAVING** instead.
+
+* **WHERE** subsets the returned data based on a logical condition.
+* **WHERE**  appears after the **FROM**, **JOIN** and **ON**  clauses, but before **GROUP BY**
+* **HAVING** appears after the **GROUP BY** clause, but before the **ORDER BY** clause
+* **HAVING** is like **WHERE**, but it works on logical statements involving aggregations.  
+
+## Questions: HAVING
+
+1. How many of the **sales reps** have more than 5 accounts that they manage?
+
+```sql
+SELECT sr.id, sr.name, COUNT(*) AS num_accounts
+FROM accounts ac
+JOIN sales_reps sr
+ON sr.id = ac.sales_rep_id
+GROUP BY sr.id, sr.name
+HAVING COUNT(*) > 5
+ORDER BY num_accounts
+```
+
+2. How many **accounts** have more than 20 orders?
+
+```sql
+SELECT ac.id, ac.name, COUNT(*) AS num_orders
+FROM accounts AS ac
+JOIN orders AS od
+ON ac.id = od.account_id
+GROUP BY ac.id, ac.name
+HAVING COUNT(*) > 20
+ORDER BY num_orders
+```
+
+3. Which account has the most orders?
+
+```sql
+SELECT ac.id, ac.name, COUNT(*) AS num_orders
+FROM accounts AS ac
+JOIN orders AS od
+ON ac.id = od.account_id
+GROUP BY ac.id, ac.name
+ORDER BY num_orders DESC
+LIMIT 1
+```
+
+4. Which accounts spent more than 30,000 usd total across all orders?
+
+```sql
+SELECT ac.id, ac.name, SUM(od.total_amt_usd) AS usd_total_across_orders
+FROM accounts AS ac
+JOIN orders AS od
+ON ac.id = od.account_id
+GROUP BY ac.id, ac.name
+HAVING SUM(od.total_amt_usd) > 30000
+ORDER BY usd_total_across_orders
+```
+
+5. Which accounts spent less than 1,000 usd total across all orders?
+
+```sql
+SELECT ac.id, ac.name, SUM(od.total_amt_usd) AS usd_total_across_orders
+FROM accounts AS ac
+JOIN orders AS od
+ON ac.id = od.account_id
+GROUP BY ac.id, ac.name
+HAVING SUM(od.total_amt_usd) < 1000
+ORDER BY usd_total_across_orders
+```
+
+6. Which account has spent the most with us?
+
+```sql
+SELECT ac.id, ac.name, SUM(od.total_amt_usd) AS usd_total_across_orders
+FROM accounts AS ac
+JOIN orders AS od
+ON ac.id = od.account_id
+GROUP BY ac.id, ac.name
+ORDER BY usd_total_across_orders DESC
+LIMIT 1
+```
+
+7. Which account has spent the least with us?
+
+```sql
+SELECT ac.id, ac.name, SUM(od.total_amt_usd) AS usd_total_across_orders
+FROM accounts AS ac
+JOIN orders AS od
+ON ac.id = od.account_id
+GROUP BY ac.id, ac.name
+ORDER BY usd_total_across_orders
+LIMIT 1
+```
+
+8. Which accounts used **facebook** as a **channel** to contact customers more than 6 times?
+
+```sql
+SELECT ac.id, ac.name, we.channel, COUNT(*) AS facebook_channel_usage
+FROM web_events we
+JOIN accounts ac
+ON we.account_id = ac.id 
+AND we.channel = 'facebook'
+GROUP BY ac.id, ac.name, we.channel
+HAVING COUNT(*) > 6
+ORDER BY facebook_channel_usage
+```
+
+```sql
+SELECT a.id, a.name, w.channel, COUNT(*) use_of_channel
+FROM accounts a
+JOIN web_events w
+ON a.id = w.account_id
+GROUP BY a.id, a.name, w.channel
+HAVING COUNT(*) > 6 AND w.channel = 'facebook'
+ORDER BY use_of_channel;
+```
+
+9. Which account used **facebook** most as a **channel**?
+
+```sql
+SELECT ac.id, ac.name, we.channel, COUNT(*) AS facebook_channel_usage
+FROM web_events we
+JOIN accounts ac
+ON we.account_id = ac.id 
+AND we.channel = 'facebook'
+GROUP BY ac.id, ac.name, we.channel
+ORDER BY facebook_channel_usage DESC
+LIMIT 1
+```
+
+_Note_: This query above only works if there are no ties for the account that used facebook the most. It is a best practice to use a larger limit number first such as 3 or 5 to see if there are ties before using LIMIT 1.
+
+10. Which channel was most frequently used by most accounts?
+
+```sql
+SELECT ac.id, ac.name, we.channel, COUNT(*) AS most_used_channel
+FROM web_events we
+JOIN accounts ac
+ON we.account_id = ac.id 
+GROUP BY ac.id, ac.name, we.channel
+ORDER BY most_used_channel DESC
+LIMIT 1
+```
