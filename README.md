@@ -1124,3 +1124,180 @@ ORDER BY 2 DESC
 LIMIT 1
 --2016-05
 ```
+
+## CASE Statements
+
+### CASE - Expert Tip
+
+* The CASE statement always goes in the SELECT clause.
+* CASE must include the following components: WHEN, THEN, and END. ELSE is an optional component to catch cases that didn’t meet any of the other previous CASE conditions.
+* You can make any conditional statement using any conditional operator (like WHERE) between WHEN and THEN. This includes stringing together multiple conditional statements using AND and OR.
+* You can include multiple WHEN statements, as well as an ELSE statement again, to deal with any unaddressed conditions.
+
+### Examples
+
+let's use a **CASE** statement. This way any time the **standard_qty** is zero, we will return 0, and otherwise, we will return the **unit_price**.
+
+```sql
+SELECT account_id, 
+CASE WHEN standard_qty = 0 OR standard_qty IS NULL THEN 0
+     ELSE standard_amt_usd/standard_qty END AS unit_price
+FROM orders
+LIMIT 10;
+```
+
+Now the first part of the statement will catch any of those **divisions by zero** values that were causing the error, and the other components will compute the division as necessary. You will notice, we essentially charge all of our accounts 4.99 for standard paper. It makes sense this doesn't fluctuate, and it is more accurate than adding 1 in the denominator like our quick fix might have been in the earlier lesson.
+
+```sql
+SELECT id,
+       account_id,
+       occurred_at,
+       channel,
+       CASE WHEN channel = 'facebook' THEN 'yes' END AS is_facebook
+FROM web_events
+ORDER BY occurred_at
+```
+
+```sql
+SELECT id,
+       account_id,
+       occurred_at,
+       channel,
+       CASE WHEN channel = 'facebook' THEN 'yes' ELSE 'no' END AS is_facebook
+FROM web_events
+ORDER BY occurred_at
+```
+
+```sql
+SELECT id,
+       account_id,
+       occurred_at,
+       channel,
+       CASE WHEN channel = 'facebook' OR channel = 'direct' THEN 'yes' 
+       ELSE 'no' END AS is_facebook
+FROM web_events
+ORDER BY occurred_at
+```
+
+> Avoid overlapping ranges, like the one below
+```sql
+SELECT account_id,
+       occurred_at,
+       total,
+       CASE WHEN total > 500 THEN 'Over 500'
+            WHEN total > 300 THEN '301 - 500'
+            WHEN total > 100 THEN '101 - 300'
+            ELSE '100 or under' END AS total_group
+FROM orders
+```
+
+```sql
+SELECT account_id,
+       occurred_at,
+       total,
+       CASE WHEN total > 500 THEN 'Over 500'
+            WHEN total > 300 AND total <= 500 THEN '301 - 500'
+            WHEN total > 100 AND total <=300 THEN '101 - 300'
+            ELSE '100 or under' END AS total_group
+FROM orders
+```
+
+There are some advantages to separating data into separate columns like this depending on what you want to do, but often this level of separation might be easier to do in another programming language - rather than with SQL.
+
+```sql
+SELECT CASE WHEN total > 500 THEN 'OVer 500'
+            ELSE '500 or under' END AS total_group,
+            COUNT(*) AS order_count
+FROM orders
+GROUP BY 1
+```
+
+### Questions: CASE
+
+1. Write a query to display for each order, the account ID, the total amount of the order, and the level of the order - ‘Large’ or ’Small’ - depending on if the order is $3000 or more, or smaller than $3000.
+
+```sql
+SELECT account_id,
+       id,
+       total_amt_usd,
+       CASE WHEN total_amt_usd >= 3000 THEN 'Larger'
+            ELSE 'Small' END AS order_level
+FROM orders
+```
+
+2. Write a query to display the number of orders in each of three categories, based on the `total` number of items in each order. The three categories are: 'At Least 2000', 'Between 1000 and 2000' and 'Less than 1000'.
+
+
+```sql
+SELECT CASE WHEN total >= 2000 THEN 'At Least 2000'
+            WHEN total >= 1000 AND total < 2000 THEN 'Between 1000 and 2000'
+            ELSE 'Less than 1000' END AS order_category,
+            COUNT(*) AS order_count
+FROM orders
+GROUP BY 1
+```
+
+3. We would like to understand 3 different levels of customers based on the amount associated with their purchases. The top-level includes anyone with a Lifetime Value (total sales of all orders) `greater than 200,000 usd`. The second level is between `200,000 and 100,000` usd. The lowest level is anyone `under 100,000` usd. Provide a table that includes the **level** associated with each **account**. You should provide the **account name**, the **total sales of all orders** for the customer, and the **level**. Order with the top spending customers listed first.
+
+```sql
+SELECT ac.name, SUM(od.total_amt_usd) AS total_sales
+       CASE WHEN SUM(od.total_amt_usd) > 200000 THEN 'top'
+            WHEN SUM(od.total_amt_usd) >= 100000 AND SUM(od.total_amt_usd) <= 200000 THEN 'middle'
+            ELSE 'low' END AS customer_level, 
+FROM orders AS od
+JOIN accounts AS ac
+ON od.account_id = ac.id
+GROUP BY 1
+ORDER BY 2 DESC
+```
+
+4. We would now like to perform a similar calculation to the first, but we want to obtain the total amount spent by customers only in `2016` and `2017`. Keep the same **levels** as in the previous question. Order with the top spending customers listed first.
+
+```sql
+SELECT ac.name,
+       od.occurred_at,
+       SUM(od.total_amt_usd) AS total_sales,
+       CASE WHEN SUM(od.total_amt_usd) > 200000 THEN 'top'
+            WHEN SUM(od.total_amt_usd) >= 100000 AND SUM(od.total_amt_usd) <= 200000 THEN 'middle'
+            ELSE 'low' END AS customer_level
+FROM orders AS od
+JOIN accounts AS ac
+ON od.account_id = ac.id
+AND od.occurred_at BETWEEN '2016-01-01' AND '2018-01-01'
+GROUP BY 1, 2
+ORDER BY 3 DESC
+```
+
+5. We would like to identify top-performing **sales reps**, which are sales reps associated with more than 200 orders. Create a table with the **sales rep name**, the total number of orders, and a column with `top` or `not` depending on if they have more than 200 orders. Place the top salespeople first in your final table.
+
+```sql
+SELECT sr.name, 
+       CASE WHEN COUNT(*) > 200 THEN 'top'
+       ELSE 'not' END AS total_number_of_orders,
+       COUNT(*) AS top_sales
+FROM sales_reps sr
+JOIN accounts ac
+ON ac.sales_rep_id = sr.id
+JOIN orders od
+ON od.account_id = ac.id
+GROUP BY sr.id, sr.name
+ORDER BY top_sales DESC
+```
+
+6. The previous didn't account for the middle, nor the dollar amount associated with the sales. Management decides they want to see these characteristics represented as well. We would like to identify top-performing **sales reps**, which are sales reps associated with more than `200` orders or more than `750000` in total sales. The `middle` group has any **rep** with more than 150 orders or `500000` in sales. Create a table with the **sales rep name**, the total number of orders, total sales across all orders, and a column with `top`, `middle`, or `low` depending on these criteria. Place the top salespeople based on the dollar amount of sales first in your final table. You might see a few upset salespeople by this criteria!
+od.occurred_at BETWEEN '2016-01-01' AND '2018-01-01'
+```sql
+SELECT sr.name, 
+       CASE WHEN COUNT(*) > 200 OR SUM(od.total_amt_usd) > 750000  THEN 'top'
+            WHEN COUNT(*) BETWEEN 150 AND 200 OR SUM(od.total_amt_usd) BETWEEN 500000 AND 750000 THEN 'middle'
+            ELSE 'not' END AS salespeople_level,
+       COUNT(*) AS total_number_of_orders,
+       SUM(od.total_amt_usd) AS total_sales_across_orders
+FROM sales_reps sr
+JOIN accounts ac
+ON ac.sales_rep_id = sr.id
+JOIN orders od
+ON od.account_id = ac.id AND od.occurred_at BETWEEN '2016-01-01' AND '2018-01-01'
+GROUP BY sr.id, sr.name
+ORDER BY total_sales_across_orders DESC
+```
