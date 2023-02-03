@@ -1330,3 +1330,29 @@ You need to use a subquery when you have the need to manipulate an existing tabl
 3.Order the annual salary of employees that are working less than 150 hours a month
 * _Existing Table_: Daily time-table of employees
 * _Subquery Aggregation_: Daily to Monthly
+
+## Subqueries vs. Joins
+
+### Use Cases:
+
+_Subquery_: When an existing table needs to be manipulated or aggregated to then be joined to a larger table.
+
+_Joins_: A fully flexible and discretionary use case where a user wants to bring two or more tables together and select and filter as needed.
+
+### Dependencies:
+
+_Subquery_: A subquery clause can be run completely independently. When trying to debug code, subqueries are often run independently to pressure test results before running the larger query.
+
+_Joins_: A join clause cannot stand and be run independently.
+
+### Subquery vs Joins Overview
+
+Components	| Subquery	| JOINS
+------------|-----------|-----------------------------------------
+Combine data from multiple tables into a single result | x | x
+Create a flexible view of tables stitched together using a “key” | | x
+Build an output to use in a later part of the query	| x	| 
+Subquery Plan: What happens under the hood | x | x
+
+## Subqueries and Joins Deep-dives
+
