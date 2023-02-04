@@ -1354,5 +1354,123 @@ Create a flexible view of tables stitched together using a “key” | | x
 Build an output to use in a later part of the query	| x	| 
 Subquery Plan: What happens under the hood | x | x
 
-## Subqueries and Joins Deep-dives
+## Subqueries Basics
+
+### Fundamentals to Know about Subqueries:
+
+* Subqueries must be fully placed inside parentheses.
+* Subqueries must be fully independent and can be executed on their own
+* Subqueries have two components to consider:
+    * Where it’s placed
+    * Dependencies with the outer/larger query
+
+**A caveat with subqueries being independent:**
+
+In almost all cases, subqueries are fully independent. They are "interim”/temp tables that can be fully executed on their own. **However, there is an exception**. When a subquery, typically in the form of a nested or inline subquery, is correlated to its outer query, it cannot run independently. This is most certainly an edge case since correlated subqueries are rarely implemented compared to standalone, simple subqueries.
+
+### Subquery Basics
+
+![Subquery Basics](img/subquery-basics.png)
+
+### Placement:
+
+There are four places where subqueries can be inserted within a larger query:
+
+* With
+* Nested
+* Inline
+* Scalar
+
+### Dependencies:
+
+A subquery can be **dependent** on the outer query or **independent** of the outer query.
+
+### Resources:
+
+The following resources on subqueries covers use cases, syntax, and examples. It's from Microsoft and can be found [here](https://docs.microsoft.com/en-us/sql/relational-databases/performance/subqueries?view=sql-server-ver15).
+
+### Subqueries: Placement
+
+Before writing any code, a strong SQL user considers what problem he or she is trying to solve, where the subquery needs to be placed, and larger tradeoffs (e.g., readability).
+
+The key concept of placement is where exactly the subquery is placed within the context of the larger query. There are four different places where a subquery can be inserted. From my experience, the decision of which placement to leverage stems from (1) the problem at hand and (2) the readability of the query.
+
+* **With**: This subquery is used when you’d like to “pseudo-create” a table from an existing table and **visually scope** the temporary table at the top of the larger query.
+
+```sql
+WITH subquery_name (column_name1, ...) AS
+ (SELECT ...)
+SELECT ...
+```
+
+* **Nested**: This subquery is used when you’d like the temporary table to act as a filter within the larger query, which implies that it often sits within the **where clause**.
+
+```sql
+SELECT s.s_id, s.s_name, g.final_grade
+FROM student s, grades g
+WHERE s.s_id = g.s_id
+IN (SELECT final_grade
+    FROM grades g
+    WHERE final_grade >3.7
+   );
+```
+
+* **Inline**: This subquery is used in the same fashion as the **WITH** use case above. However, instead of the temporary table sitting on top of the larger query, it’s embedded within the **from clause**.
+
+```sql
+SELECT student_name
+FROM
+  (SELECT student_id, student_name, grade
+   FROM student
+   WHERE teacher =10)
+WHERE grade >80;
+
+```
+
+* **Scalar**: This subquery is used when you’d like to generate a scalar value to be used as a benchmark of some sort.
+
+
+```sql
+SELECT s.student_name
+  (SELECT AVG(final_score)
+   FROM grades g
+   WHERE g.student_id = s.student_id) AS
+     avg_score
+FROM student s;
+```
+
+For example, when you’d like to calculate the average salary across an entire organization to compare to individual employee salaries. Because it’s often a single value that is generated and used as a benchmark, the scalar subquery often sits within the **select clause**.
+
+
+#### Advantages:
+
+**Readability**: `With` and `Nested` subqueries are most advantageous for readability.
+
+**Performance**: `Scalar` subqueries are advantageous for performance and are often used on smaller datasets.
+
+### Hands-on Practice
+
+We would like to know which channels send the most traffic per day on average to Parch and Posey
+
+```sql
+SELECT channel,
+       AVG(event_count) AS avg_event_count
+FROM
+(SELECT DATE_TRUNC('day',occurred_at) AS day,
+        channel,
+        count(*) as event_count
+   FROM web_events
+   GROUP BY 1,2
+   ) sub
+   GROUP BY 1
+   ORDER BY 2 DESC
+```
+
+You’ll notice the following order of operations.
+
+1. **Build the Subquery**: The aggregation of an existing table that you’d like to leverage as a part of the larger query.
+2. **Run the Subquery**: Because a subquery can stand independently, it’s important to run its content first to get a sense of whether this aggregation is the interim output you are expecting.
+3. **Encapsulate and Name**: Close this subquery off with parentheses and call it something. In this case, we called the subquery table ‘sub.’
+4. **Test Again**: Run a `SELECT *` within the larger query to determine if all syntax of the subquery is good to go.
+5. **Build Outer Query**: Develop the `SELECT *` clause as you see fit to solve the problem at hand, leveraging the subquery appropriately.
 
