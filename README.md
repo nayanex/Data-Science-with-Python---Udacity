@@ -1354,7 +1354,7 @@ Create a flexible view of tables stitched together using a “key” | | x
 Build an output to use in a later part of the query	| x	| 
 Subquery Plan: What happens under the hood | x | x
 
-## Subqueries Basics
+## Subquery Basics
 
 ### Fundamentals to Know about Subqueries:
 
@@ -1411,9 +1411,25 @@ FROM student s, grades g
 WHERE s.s_id = g.s_id
 IN (SELECT final_grade
     FROM grades g
-    WHERE final_grade >3.7
+    WHERE final_grade > 3.7
    );
 ```
+
+```sql
+SELECT *
+FROM orders
+WHERE DATE_TRUNC('month',occurred_at) =
+ (SELECT DATE_TRUNC('month',MIN(occurred_at)) AS min_month
+  FROM orders)
+ORDER BY occurred_at
+```
+
+#### Expert Tip
+
+> Note that you should not include an alias when you write a subquery in a conditional statement. This is because the subquery is treated as an individual value (or set of values in the **IN** case) rather than as a table. **Nested and Scalar subqueries often do not require aliases the way With and Inline subqueries do**.
+
+The above query works because the result of the subquery is only one cell. Most conditional logic will work with subqueries containing once-cell results. But **IN** is the only type of conditional logic that will work when the inner query container multiple results.
+
 
 * **Inline**: This subquery is used in the same fashion as the **WITH** use case above. However, instead of the temporary table sitting on top of the larger query, it’s embedded within the **from clause**.
 
@@ -1422,9 +1438,8 @@ SELECT student_name
 FROM
   (SELECT student_id, student_name, grade
    FROM student
-   WHERE teacher =10)
-WHERE grade >80;
-
+   WHERE teacher = 10)
+WHERE grade > 80;
 ```
 
 * **Scalar**: This subquery is used when you’d like to generate a scalar value to be used as a benchmark of some sort.
@@ -1473,4 +1488,39 @@ You’ll notice the following order of operations.
 3. **Encapsulate and Name**: Close this subquery off with parentheses and call it something. In this case, we called the subquery table ‘sub.’
 4. **Test Again**: Run a `SELECT *` within the larger query to determine if all syntax of the subquery is good to go.
 5. **Build Outer Query**: Develop the `SELECT *` clause as you see fit to solve the problem at hand, leveraging the subquery appropriately.
+
+### Subquery Formatting
+
+The first concept that helps when thinking about the format of a subquery is the placement of it: `with`, `nested`, `inline`, or `scalar.`
+
+The second concept to consider is an indentation, which helps heighten readability for your future self or other users that want to leverage your code. In general, be thinking about how to write your queries in a readable way. 
+
+
+### Subqueries Practice
+
+1. The average amount of standard paper sold on the first month that any order was placed in the **orders** table (in terms of quantity).
+
+2. The average amount of gloss paper sold on the first month that any order was placed in the **orders** table (in terms of quantity).
+
+3. The average amount of poster paper sold on the first month that any order was placed in the **orders** table (in terms of quantity).
+
+```sql
+SELECT AVG(standard_qty) avg_std, AVG(gloss_qty) avg_gls, AVG(poster_qty) avg_pst
+FROM orders
+WHERE DATE_TRUNC('month', occurred_at) = 
+     (SELECT DATE_TRUNC('month', MIN(occurred_at)) FROM orders);
+```
+
+> OBS: You need to use aliases for the average aboves, otherwise it will only get the value of the last one.
+
+4. The total amount spent on all orders on the first month that any order was placed in the **orders** table (in terms of usd).
+
+```sql
+SELECT SUM(total_amt_usd)
+FROM orders
+WHERE DATE_TRUNC('month', occurred_at) = 
+      (SELECT DATE_TRUNC('month', MIN(occurred_at)) FROM orders);
+```
+
+
 
