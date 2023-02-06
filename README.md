@@ -1522,5 +1522,190 @@ WHERE DATE_TRUNC('month', occurred_at) =
       (SELECT DATE_TRUNC('month', MIN(occurred_at)) FROM orders);
 ```
 
+### Subqueries: Dependencies
 
+**Simple Subquery**: The inner subquery is completely independent of the larger query.
 
+```sql
+WITH dept_average AS 
+  (SELECT dept, AVG(salary) AS avg_dept_salary
+   FROM employee
+   GROUP BY employee.dept
+  )
+SELECT E.eid, E.ename, D.avg_dept_salary
+FROM employee E
+JOIN dept.average D
+ON E.dept = D.dept
+WHERE E.salary > D.avg_dept_salary
+```
+
+**Correlated Subquery**: The inner subquery is dependent on the larger query.
+
+```sql
+SELECT employee_id,
+       name
+FROM employees_db emp
+WHERE salary > 
+      (SELECT AVG(salary)
+       FROM employees_db
+       WHERE department = emp.department
+      );
+```
+
+The second concept to consider before writing any code is the dependency of your subquery to the larger query. A subquery can either be simple or correlated. It’s better to keep subqueries simple to increase readability for other users that might leverage your code to run or adjust.
+
+## When to use Correlated Query
+
+However, sometimes, it’s slick to include a correlated subquery, specifically when the value of the inner query is dependent on a value outputted from the main query (e.g., the filter statement _constantly changes_). In the example below, you’ll notice that the value of the inner query -- average GPA -- keeps adjusting depending on the university the student goes to. THAT is a great use case for the correlated subquery.
+
+```sql
+SELECT first_name, last_name, GPA, university
+ FROM student_db outer_db
+ WHERE GPA >
+                (SELECT AVG(GPA)
+                 FROM student_db
+                 WHERE university = outer_db.university);
+```
+
+## Quiz Time
+
+Try the following quiz to full grasp the difference between the output of a Simple and Correlated Query. Use the image  below for the quiz at the end of the page.
+
+![dependencies_subquery_quiz](img/dependencies_subquery_quiz.png)
+
+Subquery 1. **[Result Set B]**
+
+```sql
+SELECT first_name, last_name, (
+                 SELECT AVG(GPA)
+                 FROM outer_db
+                 WHERE university = outer_db.university) GPA, university
+ FROM student_db outer_db;
+```
+Subquery 2. **[Result Set A]**
+
+```sql
+SELECT first_name, last_name, GPA, university
+ FROM student_db outer_db
+ WHERE GPA >
+                (SELECT AVG(GPA)
+                 FROM student_db
+                 WHERE university = outer_db.university);
+```
+
+## Views in SQL
+
+### Need for Views
+
+Assume you run a complex query to fetch data from multiple tables. Now, you’d like to query again on the top of the result set. And later, you’d like to query more on the same result set returned earlier. So, there arises a need to store the result set of the original query, so that you can re-query it multiple times. This necessity can be fulfilled with the help of _views_.
+
+### Understanding Views
+
+Tables in SQL reside in the database persistently. In contrast, **views** are the _virtual_ tables that are derived from one or more base tables. The term _virtual_ means that the views do not exist physically in a database, instead, they reside in the memory (not database), just like the result of any query is stored in the memory.
+
+The syntax for creating a view is
+
+```sql
+CREATE VIEW <VIEW_NAME>
+AS
+SELECT …
+FROM …
+WHERE …
+```
+
+The query above is called a view-definition. Once created, **you can query a view just like you’d query a normal table**, by using its name. The tuples in a view are created as an outcome of a SQL query that selects the filtered data from one or more tables. Let’s see a few examples below.
+
+#### Examples
+
+**Example 1** - Consider the same **Parch & Posey** database schema again, where the `sales_reps` table contains details about sales representatives and the `region` table contains the list of regions.
+
+> Suppose you are managing sales representatives who are looking after the accounts in the Northeast region only. The details of such a subset of sales representatives can be fetched from two tables, and stored as a view:
+
+```sql
+create view v1
+as
+select S.id, S.name as Rep_Name, R.name as Region_Name
+from sales_reps S
+join region R
+on S.region_id = R.id
+and R.name = 'Northeast';
+```
+
+The query above will store the result as a view (virtual table) with the name “V1” that can be queried later.
+
+**Example 2 **- Consider another example from **Parch & Posey** database schema again, where you have practiced the following query in the “Joins” lesson:
+
+> Provide the name for each region for every order, as well as the account name and the unit price they paid (total_amt_usd/total) for the order. Your final result should have 3 columns: region name, account name, and unit price.
+
+The query would be
+
+```sql
+CREATE VIEW V2
+AS
+SELECT r.name region, a.name account, 
+       o.total_amt_usd/(o.total + 0.01) unit_price
+FROM region r
+JOIN sales_reps s
+ON s.region_id = r.id
+JOIN accounts a
+ON a.sales_rep_id = s.id
+JOIN orders o
+ON o.account_id = a.id;
+```
+
+You can save the result set of the query as a view (virtual table) with the name “V2” that can be queried later.
+
+> **Note** - You can use any SELECT query in the CREATE VIEW query. The above two examples show a join query, whereas the next example shows a subquery used in creating a view.
+
+**Example 3** - The subquery you saw earlier, can be also stored as a view.
+
+Show the report which channels send the most traffic per day on average to Parch and Posey.
+
+```sql
+CREATE VIEW V3
+AS
+SELECT channel, AVG(events) AS average_events
+FROM (SELECT DATE_TRUNC('day',occurred_at) AS day,
+                channel, COUNT(*) as events
+         FROM web_events 
+         GROUP BY 1,2) sub
+GROUP BY channel
+```
+
+Now, this view can be queried for any information that it contains. For example, you can see the maximum value of `average_events` as:
+
+```sql
+select max(average_events)
+from v3;
+```
+
+### Points to Remember
+
+**Can we update the base tables by updating a view?**
+
+Since views do not exist physically in the database, it is may or may not be possible to execute UPDATE operations on views. It depends on the SELECT query used in the view definition. Generally, if the SELECT statement contains either an AGGREGATE function, GROUPING, or JOIN, then the view may not update the underlying base tables.
+
+**Can we insert or delete a tuple in the base table by inserting or deleting a tuple in a view?**
+
+Again, it depends on the view definition. If a view is created from a single base table, then yes, you can insert/delete tuples by doing so in the view.
+
+**Can we alter the view definition?**
+
+Most of the databases allow you to alter a view. For example, Oracle and IBM DB2 allows us to alter views and provides `CREATE OR REPLACE VIEW` option to redefine a view.
+
+### Subquery Example: Challenge
+
+* **What is the top channel used by each account to market products?**
+* **How often was that same channel used?**
+
+```sql
+SELECT name, MAX(channel_count)
+FROM 
+( SELECT ac.name, we.channel, COUNT(*) AS channel_count
+FROM accounts ac
+JOIN web_events we
+ON ac.id = we.account_id
+GROUP BY 1, 2) channel_count_per_acc
+GROUP BY 1
+ORDER BY 1
+```
