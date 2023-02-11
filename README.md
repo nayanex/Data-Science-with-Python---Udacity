@@ -1698,14 +1698,64 @@ Most of the databases allow you to alter a view. For example, Oracle and IBM DB2
 * **What is the top channel used by each account to market products?**
 * **How often was that same channel used?**
 
+#### Solution
+
+We will need to do two **aggregations and two** subqueries to make this happen.
+
+1. Let's find the number of times each channel is used by each account.
+2. So we will need to count the number of rows by Account and Channel. This count will be our **first aggregation** needed.
+
 ```sql
-SELECT name, MAX(channel_count)
-FROM 
-( SELECT ac.name, we.channel, COUNT(*) AS channel_count
-FROM accounts ac
+-- first aggregation --
+SELECT a.id, a.name, we.channel, COUNT(*) ct
+FROM accounts a
 JOIN web_events we
-ON ac.id = we.account_id
-GROUP BY 1, 2) channel_count_per_acc
-GROUP BY 1
-ORDER BY 1
+ON a.id = we.account_id
+GROUP BY a.id, a.name, we.channel
+ORDER BY a.id;
 ```
+
+3. Ok, now we have how often each channel was used by each account. _How do we only return the most used account (or accounts if multiple are tied for the most)_?
+
+We need to see which usage of the channel in our first query is equal to the maximum usage channel for that account. So, a keyword should jump out to you - **maximum**. This will be our **second aggregation** and it utilizes the data from the first table we returned so this will be our **subquery**. Let's take the maximum count from each account to create a table with the maximum usage channel amount per account.
+
+
+```sql
+SELECT t1.id, t1.name, MAX(ct)
+FROM (SELECT a.id, a.name, we.channel, COUNT(*) ct
+     FROM accounts a
+     JOIN web_events we
+     On a.id = we.account_id
+     GROUP BY a.id, a.name, we.channel) T1
+GROUP BY t1.id, t1.name
+```
+
+4. So now we have the MAX usage number for a channel for each account. Now we can use this to filter the original table to find channels for each account that match the MAX amount for their account.
+
+```sql
+SELECT t3.id, t3.name, t3.channel, t3.ct
+FROM (SELECT a.id, a.name, we.channel, COUNT(*) ct
+     FROM accounts a
+     JOIN web_events we
+     On a.id = we.account_id
+     GROUP BY a.id, a.name, we.channel) T3
+JOIN (SELECT t1.id, t1.name, MAX(ct) max_chan
+      FROM (SELECT a.id, a.name, we.channel, COUNT(*) ct
+            FROM accounts a
+            JOIN web_events we
+            ON a.id = we.account_id
+            GROUP BY a.id, a.name, we.channel) t1
+      GROUP BY t1.id, t1.name) t2
+ON t2.id = t3.id AND t2.max_chan = t3.ct
+ORDER BY t3.id;
+```
+
+
+### More Subqueries Quizzes
+
+1. Provide the name of the sales_rep in each region with the largest amount of total_amt_usd sales.
+2. For the region with the largest (sum) of sales total_amt_usd, how many total (count) orders were placed?
+How many accounts had more total purchases than the account name which has bought the most standard_qty paper throughout their lifetime as a customer?
+For the customer that spent the most (in total over their lifetime as a customer) total_amt_usd, how many web_events did they have for each channel?
+What is the lifetime average amount spent in terms of total_amt_usd for the top 10 total spending accounts?
+What is the lifetime average amount spent in terms of total_amt_usd, including only the companies that spent more per order, on average, than the average of all orders?
