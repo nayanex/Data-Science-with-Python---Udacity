@@ -1633,7 +1633,7 @@ and R.name = 'Northeast';
 
 The query above will store the result as a view (virtual table) with the name “V1” that can be queried later.
 
-**Example 2 **- Consider another example from **Parch & Posey** database schema again, where you have practiced the following query in the “Joins” lesson:
+**Example 2** - Consider another example from **Parch & Posey** database schema again, where you have practiced the following query in the “Joins” lesson:
 
 > Provide the name for each region for every order, as well as the account name and the unit price they paid (total_amt_usd/total) for the order. Your final result should have 3 columns: region name, account name, and unit price.
 
@@ -1888,6 +1888,40 @@ FROM (SELECT a.name
 
 4. For the customer that spent the most (in total over their lifetime as a customer) **total_amt_usd**, how many **web_events** did they have for each channel?
 
+Here, we first want to pull the customer with the most spent in lifetime value.
+
+```sql
+SELECT a.id, a.name, SUM(o.total_amt_usd) tot_spent
+FROM orders o
+JOIN accounts a
+ON a.id = o.account_id
+GROUP BY a.id, a.name
+ORDER BY 3 DESC
+LIMIT 1;
+```
+
+Now, we want to look at the number of events on each channel this company had, which we can match with just the **id**.
+
+```sql
+SELECT a.name, w.channel, COUNT(*)
+FROM accounts a
+JOIN web_events w
+ON a.id = w.account_id AND a.id =  (SELECT id
+                     FROM (SELECT a.id, a.name, SUM(o.total_amt_usd) tot_spent
+                           FROM orders o
+                           JOIN accounts a
+                           ON a.id = o.account_id
+                           GROUP BY a.id, a.name
+                           ORDER BY 3 DESC
+                           LIMIT 1) inner_table)
+GROUP BY 1, 2
+ORDER BY 3 DESC;
+```
+
+I added an **ORDER BY** for no real reason, and the account name to assure I was only pulling from one account.
+
+**Alternative Solution (MINE)**
+
 ```sql
 SELECT a.name, we.channel, COUNT(*)
 FROM accounts a
@@ -1904,10 +1938,11 @@ ON inner_tab.acc_id = a.id
 GROUP BY 1, 2
 ORDER BY 3 DESC;
 ```
-4211	EOG Resources	382873.30
+
 5. What is the lifetime average amount spent in terms of **total_amt_usd** for the top 10 total spending **accounts**?
 
 ```sql
+
 ```
 
 6. What is the lifetime average amount spent in terms of **total_amt_usd**, including only the companies that spent more per order, on average, than the average of all orders?
