@@ -1942,10 +1942,70 @@ ORDER BY 3 DESC;
 5. What is the lifetime average amount spent in terms of **total_amt_usd** for the top 10 total spending **accounts**?
 
 ```sql
-
+SELECT AVG(tot_spent)
+FROM (SELECT a.id, a.name, SUM(o.total_amt_usd) tot_spent
+      FROM orders o
+      JOIN accounts a
+      ON a.id = o.account_id
+      GROUP BY a.id, a.name
+      ORDER BY 3 DESC
+       LIMIT 10) temp;
 ```
 
 6. What is the lifetime average amount spent in terms of **total_amt_usd**, including only the companies that spent more per order, on average, than the average of all orders?
 
+First, we want to pull the average of all accounts in terms of total_amt_usd:
+
 ```sql
+SELECT AVG(o.total_amt_usd) avg_all
+FROM orders o
 ```
+
+Then, we want to only pull the accounts with more than this average amount.
+
+```sql
+SELECT o.account_id, AVG(o.total_amt_usd)
+FROM orders o
+GROUP BY 1
+HAVING AVG(o.total_amt_usd) > (SELECT AVG(o.total_amt_usd) avg_all
+                               FROM orders o);
+```
+
+Finally, we just want the average of these values.
+
+```sql
+SELECT AVG(avg_amt)
+FROM (SELECT o.account_id, AVG(o.total_amt_usd) avg_amt
+    FROM orders o
+    GROUP BY 1
+    HAVING AVG(o.total_amt_usd) > (SELECT AVG(o.total_amt_usd) avg_all
+                                   FROM orders o)) temp_table;
+```
+
+### Subquery Strategy
+
+Before diving headfirst into building a subquery, consider the workflow below. Strong SQL users walk through the following before ever writing a line of code:
+
+1. Determine if a subquery is needed (or a join/aggregation function will suffice).
+2. If a subquery is needed, determine where you’ll need to place it.
+3. Run the subquery as an independent query first: is the output what you expect?
+4. **Call it something**! If you are working with **With** or **Inline** subquery, you’ll most certainly need to name it.
+5. Run the entire query -- both the inner query and outer query.
+
+### Placement: WITH
+
+* When a user wants to **create a version** of an existing table t**o be used in a larger query** (e.g., aggregate daily prices to an average price table).
+* It is advantageous for readability purposes.
+
+```sql
+WITH average_price as
+( SELECT brand_id, AVG(product_price) as brand_avg_price
+  FROM product_records
+),
+SELECT a.brand_id, a.total_brand_sales, b.brand_avg_price
+FROM brand_table a
+JOIN average_price b
+ON b.brand_id = a.brand_id
+ORDER BY a.total_brand_sales desc;
+```
+
