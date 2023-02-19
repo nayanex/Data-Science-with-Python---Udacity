@@ -2238,7 +2238,6 @@ IN (SELECT DISTINCT student_id
 
 ### Placement: Inline
 
-
 * It is a very similar use case to ‘With’ subqueries.
     * Inline subqueries **create a “pseudo table”** that aggregates or **manipulates an existing table** to be **used in a larger query**.
 * The disadvantage of the inline subquery is that it is not easy to read.
@@ -2250,4 +2249,61 @@ You have 2 tables. The 1st table has house prices and zip codes. The 2nd table h
 - [x] with placement
 - [] inline placement
 - [x] nested placement
+
+### Placement: Scalar
+
+* It **selects only one column or expression and returns one row**, used in the select clause of the main query
+* It has the advantage of performance or if the data set is small
+
+#### Details:
+
+* If a scalar subquery does not find a match, it returns a NULL.
+* If a scalar subquery finds multiple matches, it returns an ERROR.
+
+```sql
+SELECT 
+   (SELECT MAX(salary) FROM employees_db) AS top_salary,
+   employee_name
+FROM employees_db;
+```
+
+## Introduction to SQL Data Cleaning
+
+By definition, data cleaning is the task of cleaning up raw data to make it usable and ready for analysis. Almost always, your data will not be ready for you to run an analysis.
+
+* Your data could all be lumped together in a single column, and you need to parse it to extract useful information.
+* Your data could all default to string data types, and you need to cast each column appropriately to run computations.
+* Your data could have un-standardized units of currency, and you need to normalize the column to ensure you are comparing equally across records.
+
+In fact, data scientists often joke that 80% of their time is spent preparing the data and only 20% is spent building models.
+
+**Normalization**: Standardizing or “cleaning up a column” by transforming it in some way to make it ready for analysis. A few normalization techniques are below:
+
+* Adjusting a column that includes multiple currencies to one common currency
+* Adjusting the varied distribution of a column value by transforming it into a z-score
+* Converting all price into a common metric (e.g., price per ounce)
+
+## Data Cleaning Strategy
+
+It’s inadvisable to dive into executing a problem immediately. In fact, I recommend taking a step back to think through a strategy before ever writing a line of code. This approach goes for data cleaning, as well.
+
+The key steps to consider when going about your data cleaning task include the following:
+
+* **What data do you need?**: Review what data you need to run an analysis and solve the problem at hand.
+* **What data do you have?**: Take stock of not only the information you have in your dataset today but what data types those fields are. Do these align with your data needs?
+* **How will you clean your data?**: Build a game plan of how you’ll convert the data you currently have to the data you need. What types of actions and data cleaning techniques will you have to apply? Do you have the skills you need to go from the current to future state?
+* **How will you analyze your data?**: Now, it’s game time! How do you run an effective analysis? Build an approach for analysis, as well. And visualize your plan to solve the problem. Finally, remember to question “so what?” at the end of your results, which will help drive recommendations for your organization.
+
+## Methods to Cover
+
+The following set of methods cover three types of data cleaning techniques: parsing information, returning where information lives, and changing the data type of the information.
+
+* **Left**: Extracts a number of characters from a string starting from the left
+* **Right**: Extracts a number of characters from a string starting from the right
+* **Substr**: Extracts a substring from a string (starting at any position)
+* **Position**: Returns the position of the first occurrence of a substring in a string
+* **Strpos**: Returns the position of a substring within a string
+* **Concat**: Adds two or more expressions together
+* **Cast**: Converts a value of any type into a specific, different data type
+* **Coalesce**: Returns the first non-null value in a list
 
